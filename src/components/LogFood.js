@@ -4,9 +4,6 @@ import { db } from './firebase';
 import { getAuth } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-const APP_ID = process.env.REACT_APP_NUTRITIONIX_APP_ID;
-const API_KEY = process.env.REACT_APP_NUTRITIONIX_API_KEY;
-
 const LogFood = ({ addFoodToDiary }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [foods, setFoods] = useState([]);
@@ -14,54 +11,59 @@ const LogFood = ({ addFoodToDiary }) => {
   const [selectedFood, setSelectedFood] = useState(null); // State for popup
   const [servingSize, setServingSize] = useState("1"); // Store as string
 
-  const fetchNutritionForCommon = async (food) => {
+  const mapOffProductToFood = (product) => {
+    const caloriesServing = product.nutriments?.["energy-kcal_serving"];
+    const calories100g = product.nutriments?.["energy-kcal_100g"];
+    const calories = caloriesServing || calories100g || 0;
+    const proteins = product.nutriments?.proteins_serving || product.nutriments?.proteins_100g || 0;
+    const fat = product.nutriments?.fat_serving || product.nutriments?.fat_100g || 0;
+    const carbs = product.nutriments?.carbohydrates_serving || product.nutriments?.carbohydrates_100g || 0;
+    const servingSizeText = product.serving_size || "";
+    const parsedServing = parseFloat(servingSizeText);
+    const servingUnit = servingSizeText.replace(parsedServing, "").trim();
+
+    return {
+      ...product,
+      food_name: product.product_name_en || product.generic_name_en || product.product_name || product.generic_name || product.brands || "Unknown product",
+      brand_name: product.brands,
+      nf_calories: calories,
+      serving_qty: parsedServing || null,
+      serving_unit: servingUnit || "",
+      nf_ingredient_statement: product.ingredients_text || product.ingredients_text_en,
+      full_nutrients: [
+        { attr_id: 203, value: proteins },
+        { attr_id: 204, value: fat },
+        { attr_id: 205, value: carbs },
+      ],
+    };
+  };
+
+  const fetchOpenFoodFactsProducts = async (query) => {
     try {
-      const res = await fetch("https://trackapi.nutritionix.com/v2/natural/nutrients", { // Get macros, calories for specific food
-        method: "POST",
-        headers: {
-          "x-app-id": APP_ID,
-          "x-app-key": API_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ query: food.food_name })
-      });
+      const res = await fetch(
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20`,
+        {
+          headers: {
+            "User-Agent": "UmmahWell/1.0 (support@ummahwell.example)",
+          },
+        }
+      );
       const data = await res.json();
-      if (data.foods && data.foods[0]) {
-        return { ...food, ...data.foods[0] };
-      }
-    } catch (e) {
-      // ignore error, return original food
+      if (!data.products || !Array.isArray(data.products)) return [];
+      return data.products.map(mapOffProductToFood);
+    } catch (error) {
+      console.error("Open Food Facts search error:", error);
+      return [];
     }
-    return food;
   };
 
   const handleSearch = async () => {
-    if (!searchTerm) return;
+    if (!searchTerm.trim()) return;
     setLoading(true);
 
-    const res = await fetch(
-      "https://trackapi.nutritionix.com/v2/search/instant?query=" + encodeURIComponent(searchTerm),
-      {
-        headers: {
-          "x-app-id": APP_ID,
-          "x-app-key": API_KEY,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-    const data = await res.json();
-    console.log("API Response:", data);
-
-    // Fetch nutrition info for all common foods in parallel
-    const commonFoods = data.common || [];
-    const brandedFoods = data.branded || [];
-
-    const enrichedCommonFoods = await Promise.all(
-      commonFoods.map(fetchNutritionForCommon)
-    );
+    const openFoodFactsFoods = await fetchOpenFoodFactsProducts(searchTerm);
 
     // --- HARAM INGREDIENT CHECK ---
-    // List of common haram ingredients
     const haramIngredients = [
       "gelatin",
       "marshmallow",
@@ -116,12 +118,9 @@ const LogFood = ({ addFoodToDiary }) => {
       }
     };
 
-    const filteredCommonFoods = enrichedCommonFoods.filter(food => !isHaram(food));
-    const filteredBrandedFoods = brandedFoods.filter(food => !isHaram(food));
+    const filteredOpenFoodFacts = openFoodFactsFoods.filter(food => !isHaram(food));
 
-    const results = [...filteredCommonFoods, ...filteredBrandedFoods];
-    console.log("Filtered results:", results);
-    setFoods(results);
+    setFoods(filteredOpenFoodFacts);
     setLoading(false);
   };
 
@@ -195,12 +194,13 @@ const LogFood = ({ addFoodToDiary }) => {
       await addDoc(
         collection(db, 'users', user.uid, 'foods'),
         {
-          ...selectedFood,
-          nf_calories: adjustedCalories, // Adjusted calories
-          protein, // Adjusted protein
-          fat,     // Adjusted fat
-          carbs,   // Adjusted carbs
-          serving_size: servingNum, // Store the serving size
+          food_name: selectedFood.food_name,
+          brand_name: selectedFood.brand_name,
+          nf_calories: adjustedCalories,
+          protein,
+          fat,
+          carbs,
+          serving_size: servingNum,
           timestamp: serverTimestamp()
         }
       );

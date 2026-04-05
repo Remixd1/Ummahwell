@@ -9,6 +9,8 @@ Built in 48 hours at MIST Toronto 2025, where it placed **1st**.
 ![Home](screenshots/home.png)
 ![Diary](screenshots/diary.png)
 ![Calorie Goal](screenshots/calorie-goal.png)
+![Log Food](screenshots/log-food.png)
+![Barcode Scanning](screenshots/barcode.png)
 
 ## Features
 

@@ -341,7 +341,7 @@ function MainHub() {
       case "log":
         return <LogFood addFoodToDiary={addFoodToDiary} />;
       case "scan":
-        return <ScanMeal />;
+        return <ScanMeal addFoodToDiary={addFoodToDiary} />;
       default:
         return <MainPage
           calorieGoal={user.calorieProfile?.calorieGoal}

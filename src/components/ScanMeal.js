@@ -4,15 +4,14 @@ import { getAuth } from "firebase/auth";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
-const APP_ID = "894eee99";
-const API_KEY = "e882b07c8a13502616718f881f6ae51e"; // API keys for Nutritionx
-
 function ScanMeal({ addFoodToDiary }) {
   const videoRef = useRef(null); // creates DOM element - allows React to manipulate the feed
   const [selectedFood, setSelectedFood] = useState(null);
   const [servingSize, setServingSize] = useState("1");
+  const [scanStatus, setScanStatus] = useState("Waiting for barcode...");
+  const [scanError, setScanError] = useState(null);
   
-  // MacroCircle helper from LogFood.js
+  // Helper component for macro circles
   function MacroCircle({ label, value, color, unit }) {
     return (
       <div style={{ textAlign: "center" }}>
@@ -42,6 +41,33 @@ function ScanMeal({ addFoodToDiary }) {
   // Helper for macros
   const getMacro = (food, attrId) => {
     return Math.round((food.full_nutrients?.find(n => n.attr_id === attrId)?.value || 0) * (parseFloat(servingSize) || 0));
+  };
+
+  const mapOffProductToFood = (product) => {
+    const caloriesServing = product.nutriments?.["energy-kcal_serving"];
+    const calories100g = product.nutriments?.["energy-kcal_100g"];
+    const calories = caloriesServing || calories100g || 0;
+    const proteins = product.nutriments?.proteins_serving || product.nutriments?.proteins_100g || 0;
+    const fat = product.nutriments?.fat_serving || product.nutriments?.fat_100g || 0;
+    const carbs = product.nutriments?.carbohydrates_serving || product.nutriments?.carbohydrates_100g || 0;
+    const servingSizeText = product.serving_size || "";
+    const parsedServing = parseFloat(servingSizeText);
+    const servingUnit = servingSizeText.replace(parsedServing, "").trim();
+
+    return {
+      ...product,
+      food_name: product.product_name_en || product.generic_name_en || product.product_name || product.generic_name || product.brands || "Unknown product",
+      brand_name: product.brands,
+      nf_calories: calories,
+      serving_qty: parsedServing || null,
+      serving_unit: servingUnit || "",
+      nf_ingredient_statement: product.ingredients_text || product.ingredients_text_en,
+      full_nutrients: [
+        { attr_id: 203, value: proteins },
+        { attr_id: 204, value: fat },
+        { attr_id: 205, value: carbs },
+      ],
+    };
   };
 
   // Helper for calories
@@ -86,8 +112,8 @@ function ScanMeal({ addFoodToDiary }) {
 
   const normalize = str =>
     (str || "")
-      .replace(/\([^)]*\)/g, '') // Remove anything in brackets () - foods may contain unfamiliar symbols from Nutritionix
-      .replace(/[^\w\s]/gi, '')  // Remove non-word characters
+      .replace(/\([^)]*\)/g, '')
+      .replace(/[^\w\s]/gi, '')
       .toLowerCase()
       .trim();
 
@@ -108,7 +134,7 @@ function ScanMeal({ addFoodToDiary }) {
 
     // Check in food name or brand name
     if (food.brand_name) {
-      if (food.nf_ingredient_statement) { // Check if ingredient statement exists in Nutritionix
+      if (food.nf_ingredient_statement) {
         const ingredientsStr = food.nf_ingredient_statement.toLowerCase();
         const foundHaram = haramIngredients.find(haram => // Cross reference with haram array
           ingredientsStr.includes(haram));
@@ -158,7 +184,8 @@ function ScanMeal({ addFoodToDiary }) {
         await addDoc( // Add food to Firestore
           collection(db, 'users', user.uid, 'foods'),
           {
-            ...selectedFood,
+            food_name: selectedFood.food_name,
+            brand_name: selectedFood.brand_name,
             nf_calories: adjustedCalories, // Adjusted calories
             protein, // Adjusted protein
             fat,     // Adjusted fat
@@ -180,29 +207,36 @@ function ScanMeal({ addFoodToDiary }) {
 
     async function enableCamera() {
       try {
+        setScanStatus("Requesting camera permission...");
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          setScanStatus("Scanning for barcode...");
+          setScanError(null);
           codeReader = new BrowserMultiFormatReader(); // using @Zxing/library
           codeReader.decodeFromVideoDevice(null, videoRef.current, (result, err) => { // get barcode from camera
             if (result) {
-              fetch(`https://trackapi.nutritionix.com/v2/search/item?upc=${result.getText()}`, { // Search Nutritionix using UPC from barcode
+              const upc = result.getText();
+              setScanStatus(`Detected barcode ${upc}. Looking up product...`);
+              codeReader.reset();
+              fetch(`https://world.openfoodfacts.org/api/v2/product/${upc}.json`, {
                 headers: {
-                  "x-app-id": APP_ID,
-                  "x-app-key": API_KEY,
-                  "Content-Type": "application/json"
+                  "User-Agent": "UmmahWell/1.0 (support@ummahwell.example)",
                 }
               })
                 .then(res => res.json())
                 .then(data => {
-                  if (data && data.foods && data.foods.length > 0) {
-                    handleAdd(data.foods[0]);
+                  if (data && data.status === 1 && data.product) {
+                    setScanStatus("Product found.");
+                    handleAdd(mapOffProductToFood(data.product));
                   } else {
+                    setScanStatus("No food found for this UPC.");
                     alert("No food found for this UPC.");
                   }
                 })
                 .catch(err => {
-                  console.error("Nutritionix API error:", err);
+                  console.error("Open Food Facts barcode lookup error:", err);
+                  setScanError("Error fetching food info.");
                   alert("Error fetching food info.");
                 });
             }
@@ -210,6 +244,8 @@ function ScanMeal({ addFoodToDiary }) {
         }
       } catch (err) {
         console.error("Camera access denied:", err);
+        setScanError("Camera access denied. Please allow camera access or use a supported browser.");
+        setScanStatus(null);
       }
     }
     enableCamera(); // start camera access
@@ -229,6 +265,8 @@ function ScanMeal({ addFoodToDiary }) {
         playsInline
         style={{ width: "100%", maxWidth: 400, borderRadius: 8, border: "1px solid #ccc" }}
       />
+      {scanError && <p style={{ color: "red", marginTop: 12 }}>{scanError}</p>}
+      {scanStatus && <p style={{ marginTop: 12 }}>{scanStatus}</p>}
 
       {selectedFood && (
         <div className="popup-overlay">
