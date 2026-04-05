@@ -1,53 +1,71 @@
-# Getting Started with Create React App
+# Ummahwell
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A halal-conscious calorie tracking web app built for Muslim users. Ummahwell lets you search foods, log meals to a daily diary, and automatically flags haram ingredients — so you never have to second-guess what you're eating.
 
-## Available Scripts
+Built in 48 hours at MIST Toronto 2025, where it placed **1st**.
 
-In the project directory, you can run:
+## Screenshots
 
-### `npm start`
+![Home](screenshots/home.png)
+![Diary](screenshots/diary.png)
+![Calorie Goal](screenshots/calorie-goal.png)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Features
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Haram ingredient detection — automatically flags non-halal ingredients in food items
+- Food search powered by the Nutritionix API with calorie and macro details
+- Barcode scanner using ZXing camera library to look up packaged foods instantly
+- Daily food diary with calorie tracking bar and goal setting
+- Macro breakdown popup for each food item
+- Day streak tracker to keep you consistent
+- Mobile-responsive design
 
-### `npm test`
+## Tech Stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Frontend:** React.js
+- **Backend/Database:** Firebase
+- **APIs:** Nutritionix API, ZXing barcode scanning library
 
-### `npm run build`
+## Getting Started
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Prerequisites
+- Node.js installed
+- A Nutritionix API key (free tier available at developer.nutritionix.com)
+- Firebase project credentials
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Clone the repo
 
-### `npm run eject`
+   git clone https://github.com/Remixd1/CalorieTracker.git
+   cd CalorieTracker
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+2. Install dependencies
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+   npm install
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+3. Add your environment variables
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+   Create a .env file in the root directory and add:
 
-## Learn More
+   REACT_APP_NUTRITIONIX_APP_ID=your_app_id
+   REACT_APP_NUTRITIONIX_API_KEY=your_api_key
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+4. Start the app
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+   npm start
 
-### Code Splitting
+Open http://localhost:3000 to view it in your browser.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Background
+
+Originally developed for the MIST Toronto 2025 hackathon as a solution for Muslim users who struggled to find halal-verified nutritional tracking tools. Most calorie apps don't account for halal dietary restrictions at all, Ummahwell bridges that gap. It aims to provide a convenient and intuitive app to assist the Islamic community stay true to their beliefs.
+
+## Contributors
+
+- Remus (Remixd1) — food search API, diary feature, calorie tracking UI, mobile responsiveness
+- Salman (SalmanBurhan2007) - Front-end design, Front-end fucntionality, Islamic Quotes, scan meal page
+- Ishan (ovr-hit) - Backend user authenication, data storage, ZXing library implementation and functionality
 
 ### Analyzing the Bundle Size
 

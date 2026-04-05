@@ -4,8 +4,8 @@ import { db } from './firebase';
 import { getAuth } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-const APP_ID = "894eee99";
-const API_KEY = "e882b07c8a13502616718f881f6ae51e";
+const APP_ID = process.env.REACT_APP_NUTRITIONIX_APP_ID;
+const API_KEY = process.env.REACT_APP_NUTRITIONIX_API_KEY;
 
 const LogFood = ({ addFoodToDiary }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,6 +50,7 @@ const LogFood = ({ addFoodToDiary }) => {
       }
     );
     const data = await res.json();
+    console.log("API Response:", data);
 
     // Fetch nutrition info for all common foods in parallel
     const commonFoods = data.common || [];
@@ -119,6 +120,7 @@ const LogFood = ({ addFoodToDiary }) => {
     const filteredBrandedFoods = brandedFoods.filter(food => !isHaram(food));
 
     const results = [...filteredCommonFoods, ...filteredBrandedFoods];
+    console.log("Filtered results:", results);
     setFoods(results);
     setLoading(false);
   };
