@@ -15,7 +15,7 @@ Built in 48 hours at MIST Toronto 2025, where it placed **1st**.
 ## Features
 
 - Haram ingredient detection — automatically flags non-halal ingredients in food items
-- Food search powered by the Nutritionix API with calorie and macro details
+- Food search powered by the Open Food Facts API with calorie and macro details
 - Barcode scanner using ZXing camera library to look up packaged foods instantly
 - Daily food diary with calorie tracking bar and goal setting
 - Macro breakdown popup for each food item
@@ -26,13 +26,12 @@ Built in 48 hours at MIST Toronto 2025, where it placed **1st**.
 
 - **Frontend:** React.js
 - **Backend/Database:** Firebase
-- **APIs:** Nutritionix API, ZXing barcode scanning library
+- **APIs:** Open Food Facts API, ZXing barcode scanning library
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js installed
-- A Nutritionix API key (free tier available at developer.nutritionix.com)
 - Firebase project credentials
 
 ### Installation
@@ -46,14 +45,8 @@ Built in 48 hours at MIST Toronto 2025, where it placed **1st**.
 
    npm install
 
-3. Add your environment variables
 
-   Create a .env file in the root directory and add:
-
-   REACT_APP_NUTRITIONIX_APP_ID=your_app_id
-   REACT_APP_NUTRITIONIX_API_KEY=your_api_key
-
-4. Start the app
+3. Start the app
 
    npm start
 
