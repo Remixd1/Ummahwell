@@ -21,8 +21,16 @@ const ISLAMIC_QUOTES = [
 "The patient, the true, the obedient, those who spend [in the way of Allah ], and those who seek forgiveness before dawn. (Quran 3:17)",
 ]; // all daily islamic quotes
 
-function MainPage({ calorieGoal }) {
+function MainPage({ calorieGoal, activityLevel }) {
   const baseGoal = calorieGoal ? Number(calorieGoal) : 2000; // fallback to 2000 if not set
+  const activityLabels = {
+    sedentary: "Sedentary",
+    lightly_active: "Lightly active",
+    moderately_active: "Moderately active",
+    very_active: "Very active",
+    extra_active: "Extra active",
+  };
+  const activityLabel = activityLabels[activityLevel] || "Not set";
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [proteinConsumed, setProteinConsumed] = useState(0);
   const [fatConsumed, setFatConsumed] = useState(0);
@@ -199,6 +207,9 @@ function MainPage({ calorieGoal }) {
             <div className="calories-details">
               <div>
                 <strong>Base Goal:</strong> {baseGoal} cal
+              </div>
+              <div>
+                <strong>Activity Level:</strong> {activityLabel}
               </div>
               <div>
                 <strong>Consumed:</strong> {caloriesConsumed} cal

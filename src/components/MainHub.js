@@ -33,15 +33,33 @@ function SettingsPopup({ onClose, onLogout, onEditProfile, onCalorieGoal }) {
 }
 
 // CalorieGoalPopup component - within settings popup
-function CalorieGoalPopup({ onClose, userId, onSave }) {
+function CalorieGoalPopup({ onClose, userId, currentCalorieProfile, onSave }) {
   const [unit, setUnit] = useState("metric"); // "metric" or "us"
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("male");
-  const [calorieGoal, setCalorieGoal] = useState("");
+  const [activityLevel, setActivityLevel] = useState(currentCalorieProfile?.activityLevel || "sedentary");
+  const [calorieGoal, setCalorieGoal] = useState(currentCalorieProfile?.calorieGoal || "");
   const [recommended, setRecommended] = useState(null);
+  const [manualGoalEdited, setManualGoalEdited] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const activityFactors = {
+    sedentary: 1.2,
+    lightly_active: 1.375,
+    moderately_active: 1.55,
+    very_active: 1.725,
+    extra_active: 1.9,
+  };
+
+  const activityLabels = {
+    sedentary: "Sedentary",
+    lightly_active: "Lightly active",
+    moderately_active: "Moderately active",
+    very_active: "Very active",
+    extra_active: "Extra active",
+  };
 
   // Calculate recommended calories when all fields are filled
   useEffect(() => {
@@ -63,15 +81,16 @@ function CalorieGoalPopup({ onClose, userId, onSave }) {
         gender === "male"
           ? 10 * w + 6.25 * h - 5 * a + 5
           : 10 * w + 6.25 * h - 5 * a - 161;
-      // Assume sedentary (x1.2)
-      let rec = Math.round(bmr * 1.2);
+      const factor = activityFactors[activityLevel] || 1.2;
+      let rec = Math.round(bmr * factor);
       setRecommended(rec);
-      setCalorieGoal(rec);
+      if (!manualGoalEdited) {
+        setCalorieGoal(rec);
+      }
     } else {
       setRecommended(null);
-      setCalorieGoal("");
     }
-  }, [unit, weight, height, age, gender]);
+  }, [unit, weight, height, age, gender, activityLevel, manualGoalEdited]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -79,13 +98,14 @@ function CalorieGoalPopup({ onClose, userId, onSave }) {
       doc(db, "users", userId),
       {
         calorieProfile: {
-          calorieGoal, // Save to Firestore
+          calorieGoal,
+          activityLevel,
         },
       },
       { merge: true }
     );
     setSaving(false);
-    onSave && onSave({ calorieProfile: { calorieGoal } });
+    onSave && onSave({ calorieProfile: { calorieGoal, activityLevel } });
     onClose();
   };
 
@@ -205,6 +225,20 @@ function CalorieGoalPopup({ onClose, userId, onSave }) {
               Female
             </label>
           </div>
+          <label>
+            <span>Activity Level</span>
+            <select
+              className="calorie-goal-input"
+              value={activityLevel}
+              onChange={e => setActivityLevel(e.target.value)}
+            >
+              <option value="sedentary">Sedentary</option>
+              <option value="lightly_active">Lightly active</option>
+              <option value="moderately_active">Moderately active</option>
+              <option value="very_active">Very active</option>
+              <option value="extra_active">Extra active</option>
+            </select>
+          </label>
           {recommended && (
             <div style={{ width: "100%", marginTop: "1em" }}>
               <strong>Recommended Maintenance Calories:</strong>
@@ -214,13 +248,16 @@ function CalorieGoalPopup({ onClose, userId, onSave }) {
                   type="number"
                   min="0"
                   value={calorieGoal}
-                  onChange={e => setCalorieGoal(e.target.value)}
+                  onChange={e => {
+                    setCalorieGoal(e.target.value);
+                    setManualGoalEdited(true);
+                  }}
                   style={{ width: "120px" }}
                 />{" "}
                 kcal/day
               </div>
               <small>
-                (You can adjust this value before submitting)
+                (Calculated using {activityLabels[activityLevel]} activity)
               </small>
             </div>
           )}
@@ -306,7 +343,10 @@ function MainHub() {
       case "scan":
         return <ScanMeal />;
       default:
-        return <MainPage calorieGoal={user.calorieProfile?.calorieGoal} />;
+        return <MainPage
+          calorieGoal={user.calorieProfile?.calorieGoal}
+          activityLevel={user.calorieProfile?.activityLevel}
+        />;
     }
   };
 
@@ -407,6 +447,7 @@ function MainHub() {
         <CalorieGoalPopup
           onClose={() => setShowCalorieGoal(false)}
           userId={user.id}
+          currentCalorieProfile={user.calorieProfile}
           onSave={updated => setUser(u => ({ ...u, ...updated }))}
         />
       )}
